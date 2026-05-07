@@ -13,11 +13,11 @@ import streamlit as st
 BASE_DIR = "."   # contient directement les dossiers 'absolue/' et 'relative/'
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
 CMAP = "turbo"
-UNITS = {
+UNITS_ABS = {
     "TMm": "°C",
     "TMx": "°C",
     "PRCPTOT": "mm/an",
-    "Rx1D": "mm/j"
+    "Rx1D": "mm/j",
 }
 
 # =====================================================
@@ -71,6 +71,12 @@ comp = st.sidebar.selectbox("Type de variabilité", types)
 if comp == "— Sélectionner —":
     st.stop()
 
+
+if mode == "relative":
+    unit = "%"
+else:
+    unit = UNITS_ABS.get(indicator, "")
+    
 # ==========================
 # PLOT
 # ==========================
@@ -90,9 +96,13 @@ for season in SEASONS:
         # Cas relatif : moyenne sur la dimension 'period'
         if "period" in da.dims:
             da = da.mean("period")
-
+            
         # variance -> écart-type
         da = np.sqrt(da)
+        
+        # cas relatif : passage en %
+        if mode == "relative":
+            da = da * 100.0
 
         data[season] = da
         vmax = max(vmax, float(np.nanmax(da.values)))
@@ -129,8 +139,7 @@ unit = UNITS.get(indicator, "")
 # --- colorbar ---
 cax = fig.add_axes([0.32, 0.06, 0.36, 0.025])
 cb = fig.colorbar(pcm_last, cax=cax, orientation="horizontal")
-cb.set_label(unit, fontsize=12)
-
+cb.set_label(unit, fontsize=11)
 
 fig.suptitle(
     f"{indicator} – {comp} ({mode})\n"
