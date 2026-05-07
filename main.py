@@ -10,7 +10,7 @@ import streamlit as st
 # CONFIG
 # =====================================================
 
-BASE_DIR = "."   # structure : absolue/INDI_SAISON/*.nc
+BASE_DIR = "."   # contient absolue/ et relative/
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
 CMAP = "turbo"
 
@@ -18,23 +18,10 @@ CMAP = "turbo"
 # UTILS
 # =====================================================
 
-def get_coord(da, names):
-    for n in names:
-        if n in da.coords:
-            return da.coords[n]
-        if n in da.dims:
-            return da[n]
-    raise KeyError("Coordonnée spatiale introuvable")
-
 def list_indicators(mode_dir):
-    # dossiers du type INDI_SAISON
     return sorted({d.split("_")[0] for d in os.listdir(mode_dir) if "_" in d})
 
 def load_field(mode_dir, indicator, season, comp):
-    """
-    Charge un fichier :
-    MOYENNE/{absolue|relative}/INDI_SAISON/*_TYPE_MEAN_80ANS.nc
-    """
     indir = os.path.join(mode_dir, f"{indicator}_{season}")
     files = sorted(glob.glob(os.path.join(indir, f"*_{comp}_MEAN_80ANS.nc")))
     return xr.open_dataarray(files[0]) if files else None
@@ -44,7 +31,7 @@ def load_field(mode_dir, indicator, season, comp):
 # =====================================================
 
 st.set_page_config(layout="wide")
-st.title("Variabilité climatique – moyenne sur 80 ans")
+st.title("Variabilité climatique – écart‑type moyen (80 ans)")
 
 # ==========================
 # SIDEBAR
@@ -52,26 +39,36 @@ st.title("Variabilité climatique – moyenne sur 80 ans")
 
 mode = st.sidebar.selectbox(
     "Type de données",
-    ["absolue", "relative"]
+    ["— Sélectionner —", "absolue", "relative"]
 )
+
+if mode == "— Sélectionner —":
+    st.info("Sélectionnez un type de données pour commencer.")
+    st.stop()
 
 mode_dir = os.path.join(BASE_DIR, mode)
 
-indicators = list_indicators(mode_dir)
+indicators = ["— Sélectionner —"] + list_indicators(mode_dir)
 indicator = st.sidebar.selectbox("Indicateur", indicators)
 
+if indicator == "— Sélectionner —":
+    st.stop()
+
 if mode == "absolue":
-    types = ["interne", "scenario", "modele", "total"]
+    types = ["— Sélectionner —", "interne", "scenario", "modele", "total"]
 else:
-    types = ["interne", "scenario", "modele"]
+    types = ["— Sélectionner —", "interne", "scenario", "modele"]
 
 comp = st.sidebar.selectbox("Type de variabilité", types)
+
+if comp == "— Sélectionner —":
+    st.stop()
 
 # ==========================
 # PLOT
 # ==========================
 
-fig, axes = plt.subplots(2, 2, figsize=(14, 14))
+fig, axes = plt.subplots(2, 2, figsize=(18, 18))
 axes = axes.flatten()
 
 data = {}
@@ -81,28 +78,29 @@ pcm_last = None
 # --- chargement ---
 for season in SEASONS:
     da = load_field(mode_dir, indicator, season, comp)
-    data[season] = da
     if da is not None:
+        da = np.sqrt(da)  # ✅ passage VAR → ET
+        data[season] = da
         vmax = max(vmax, float(np.nanmax(da.values)))
+    else:
+        data[season] = None
 
 # --- affichage ---
 for i, season in enumerate(SEASONS):
     ax = axes[i]
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.set_title(season, fontsize=16, fontweight="bold")
+    ax.set_title(season, fontsize=18, fontweight="bold")
 
     da = data[season]
     if da is None:
         ax.text(0.5, 0.5, "Donnée manquante",
-                ha="center", va="center", transform=ax.transAxes)
+                ha="center", va="center",
+                transform=ax.transAxes)
         continue
 
-    lon = get_coord(da, ["lon", "x"])
-    lat = get_coord(da, ["lat", "y"])
-
     pcm = ax.pcolormesh(
-        lon, lat, da,
+        da.values,
         cmap=CMAP,
         vmin=0,
         vmax=vmax,
@@ -110,15 +108,15 @@ for i, season in enumerate(SEASONS):
     )
     pcm_last = pcm
 
-# --- colorbar sous la grille ---
-cax = fig.add_axes([0.25, 0.06, 0.5, 0.025])
+# --- colorbar ---
+cax = fig.add_axes([0.25, 0.04, 0.5, 0.025])
 fig.colorbar(pcm_last, cax=cax, orientation="horizontal")
 
 fig.suptitle(
-    f"{indicator} – {comp} ({mode})\nMoyenne sur 80 ans",
-    fontsize=18,
+    f"{indicator} – {comp} ({mode})\nÉcart‑type moyen sur 80 ans",
+    fontsize=20,
     fontweight="bold"
 )
 
-plt.tight_layout(rect=[0, 0.1, 1, 0.93])
-st.pyplot(fig)
+plt.tight_layout(rect=[0, 0.09, 1, 0.94])
+st.pyplot(fig, use_container_width=True)
