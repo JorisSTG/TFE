@@ -68,7 +68,7 @@ if comp == "— Sélectionner —":
 # PLOT
 # ==========================
 
-fig, axes = plt.subplots(2, 2, figsize=(18, 18))
+fig, axes = plt.subplots(2, 2, figsize=(12, 12))
 axes = axes.flatten()
 
 data = {}
@@ -109,7 +109,7 @@ for i, season in enumerate(SEASONS):
     pcm_last = pcm
 
 # --- colorbar ---
-cax = fig.add_axes([0.25, 0.04, 0.5, 0.025])
+cax = fig.add_axes([0.3, 0.05, 0.4, 0.025])
 fig.colorbar(pcm_last, cax=cax, orientation="horizontal")
 
 fig.suptitle(
@@ -118,5 +118,5 @@ fig.suptitle(
     fontweight="bold"
 )
 
-plt.tight_layout(rect=[0, 0.09, 1, 0.94])
-st.pyplot(fig, use_container_width=True)
+plt.tight_layout(rect=[0, 0.09, 1, 0.92])
+st.pyplot(fig)
