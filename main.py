@@ -10,7 +10,7 @@ import streamlit as st
 # CONFIG
 # =====================================================
 
-BASE_DIR = "MOYENNE"   # structure : MOYENNE/absolue/INDI_SAISON/*.nc
+BASE_DIR = "."   # structure : absolue/INDI_SAISON/*.nc
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
 CMAP = "turbo"
 
