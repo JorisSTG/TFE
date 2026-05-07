@@ -134,7 +134,7 @@ for i, season in enumerate(SEASONS):
     )
     pcm_last = pcm
 
-unit = UNITS.get(indicator, "")
+unit = UNITS_ABS.get(indicator, "")
 
 # --- colorbar ---
 cax = fig.add_axes([0.32, 0.06, 0.36, 0.025])
