@@ -68,7 +68,7 @@ if comp == "— Sélectionner —":
 # PLOT
 # ==========================
 
-fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+fig, axes = plt.subplots(2, 2, figsize=(8, 8))
 axes = axes.flatten()
 
 data = {}
