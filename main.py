@@ -13,6 +13,12 @@ import streamlit as st
 BASE_DIR = "."   # contient directement les dossiers 'absolue/' et 'relative/'
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
 CMAP = "turbo"
+UNITS = {
+    "TMm": "°C",
+    "TMx": "°C",
+    "PRCPTOT": "mm/an",
+    "Rx1D": "mm/j"
+}
 
 # =====================================================
 # UTILS
@@ -118,15 +124,19 @@ for i, season in enumerate(SEASONS):
     )
     pcm_last = pcm
 
+unit = UNITS.get(indicator, "")
+
 # --- colorbar ---
 cax = fig.add_axes([0.32, 0.06, 0.36, 0.025])
-fig.colorbar(pcm_last, cax=cax, orientation="horizontal")
+cb = fig.colorbar(pcm_last, cax=cax, orientation="horizontal")
+cb.set_label(unit, fontsize=12)
+
 
 fig.suptitle(
-    f"{indicator} – {comp} ({mode})\nÉcart‑type moyen sur 80 ans",
+    f"{indicator} – {comp} ({mode})\n"
+    f"Écart‑type moyen sur 80 ans [{unit}]",
     fontsize=14,
     fontweight="bold"
 )
-
 plt.tight_layout(rect=[0, 0.1, 1, 0.93])
 st.pyplot(fig)
