@@ -33,7 +33,6 @@ def load_field(mode_dir, indicator, season, comp):
 # =====================================================
 
 st.set_page_config(layout="centered")
-st.title("Variabilité climatique – écart‑type moyen (80 ans)")
 
 # ==========================
 # SIDEBAR
