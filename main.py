@@ -3,16 +3,16 @@ import os
 import glob
 import xarray as xr
 import numpy as np
-import matplotlib.pyplot as plt
 import streamlit as st
+import plotly.express as px
 
 # =====================================================
 # CONFIG
 # =====================================================
 
-BASE_DIR = "."   # contient directement les dossiers 'absolue/' et 'relative/'
+BASE_DIR = "."   # contient 'absolue/' et 'relative/'
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-CMAP = "turbo"
+
 UNITS_ABS = {
     "TMm": "°C",
     "TMx": "°C",
@@ -20,16 +20,16 @@ UNITS_ABS = {
     "Rx1D": "mm/j",
 }
 
+COLORMAP = "turbo"
+
 # =====================================================
 # UTILS
 # =====================================================
 
 def list_indicators(mode_dir):
-    """Liste des indicateurs disponibles à partir des dossiers INDI_SAISON"""
     return sorted({d.split("_")[0] for d in os.listdir(mode_dir) if "_" in d})
 
 def load_field(mode_dir, indicator, season, comp):
-    """Charge le champ NetCDF correspondant"""
     indir = os.path.join(mode_dir, f"{indicator}_{season}")
     files = sorted(glob.glob(os.path.join(indir, f"*_{comp}_MEAN_80ANS.nc")))
     return xr.open_dataarray(files[0]) if files else None
@@ -38,7 +38,8 @@ def load_field(mode_dir, indicator, season, comp):
 # STREAMLIT APP
 # =====================================================
 
-st.set_page_config(layout="centered")
+st.set_page_config(layout="wide")
+st.title("Variabilité climatique – écart‑type moyen (80 ans)")
 
 # ==========================
 # SIDEBAR
@@ -50,7 +51,6 @@ mode = st.sidebar.selectbox(
 )
 
 if mode == "— Sélectionner —":
-    st.info("Veuillez sélectionner un type de données.")
     st.stop()
 
 mode_dir = os.path.join(BASE_DIR, mode)
@@ -71,36 +71,31 @@ comp = st.sidebar.selectbox("Type de variabilité", types)
 if comp == "— Sélectionner —":
     st.stop()
 
+# ==========================
+# UNITS
+# ==========================
 
 if mode == "relative":
     unit = "%"
 else:
     unit = UNITS_ABS.get(indicator, "")
-    
-# ==========================
-# PLOT
-# ==========================
 
-fig, axes = plt.subplots(2, 2, figsize=(9, 9))
-axes = axes.flatten()
+# ==========================
+# DATA PREPARATION
+# ==========================
 
 data = {}
 vmax = 0.0
-pcm_last = None
 
-# --- chargement et préparation des données ---
 for season in SEASONS:
     da = load_field(mode_dir, indicator, season, comp)
 
     if da is not None:
-        # Cas relatif : moyenne sur la dimension 'period'
         if "period" in da.dims:
             da = da.mean("period")
-            
-        # variance -> écart-type
-        da = np.sqrt(da)
-        
-        # cas relatif : passage en %
+
+        da = np.sqrt(da)  # variance → écart‑type
+
         if mode == "relative":
             da = da * 100.0
 
@@ -109,41 +104,35 @@ for season in SEASONS:
     else:
         data[season] = None
 
-# --- tracé ---
-for i, season in enumerate(SEASONS):
-    ax = axes[i]
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title(season, fontsize=14, fontweight="bold")
+# ==========================
+# PLOT (PLOTLY – INTERACTIF)
+# ==========================
 
+st.subheader(f"{indicator} – {comp} ({mode})")
+st.caption(f"Écart‑type moyen sur 80 ans [{unit}]")
+
+cols = st.columns(2)
+
+for i, season in enumerate(SEASONS):
     da = data[season]
+
     if da is None:
-        ax.text(
-            0.5, 0.5, "Donnée manquante",
-            ha="center", va="center",
-            transform=ax.transAxes
-        )
+        cols[i % 2].warning(f"{season} : donnée manquante")
         continue
 
-    pcm = ax.pcolormesh(
+    fig = px.imshow(
         da.values,
-        cmap=CMAP,
-        vmin=0,
-        vmax=vmax,
-        shading="auto"
+        origin="lower",
+        color_continuous_scale=COLORMAP,
+        zmin=0,
+        zmax=vmax,
+        labels={"color": f"{unit}"},
+        title=season,
     )
-    pcm_last = pcm
 
-# --- colorbar ---
-cax = fig.add_axes([0.32, 0.06, 0.36, 0.025])
-cb = fig.colorbar(pcm_last, cax=cax, orientation="horizontal")
-cb.set_label(unit, fontsize=11)
+    fig.update_layout(
+        height=380,
+        margin=dict(l=20, r=20, t=40, b=20),
+    )
 
-fig.suptitle(
-    f"{indicator} – {comp} ({mode})\n"
-    f"Écart‑type moyen sur 80 ans [{unit}]",
-    fontsize=14,
-    fontweight="bold"
-)
-plt.tight_layout(rect=[0, 0.1, 1, 0.93])
-st.pyplot(fig)
+    cols[i % 2].plotly_chart(fig, use_container_width=True)
